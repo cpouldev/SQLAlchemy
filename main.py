@@ -1,42 +1,43 @@
 from config import crud
 from config.crud import Session
 from models.models import Author, Post, Category
+from contextlib import contextmanager
+
+@contextmanager
+def db():
+    session = Session()
+    
+    yield session
+    
+    session.close()
 
 
 def restart_db():
     crud.recreate_database()
 
-    authors = []
     posts = []
-    categories = []
-
-    for i in range(10):
-        authors.append(Author(name=f"author {i}"))
-        posts.append(Post(title=f"title {i}", content=f"content {i}"))
-        categories.append(Category(name=f"category {i}"))
-
-    with Session.begin() as session:
-        session.add_all(authors)
+    
+    with db() as session:
+        
+        for i in range(10):
+            author = Author(name=f'author {i}')
+            category = Category(name=f'category {i}')
+            post = Post(title=f'title {i}', content=f'content {i}', author=author, category=category)
+            
+            posts.append(post)
+            
+        
         session.add_all(posts)
-        session.add_all(categories)
+        
         session.commit()
-
-    with Session.begin() as session:
+        
         currCat = session.query(Category).first()
-        currPost = session.query(Post).first()
-        currAuthor = session.query(Author).first()
+        currPost = currCat.post
+        currAuthor = currCat.post.author
 
         print(currPost)
         print(currCat)
         print(currAuthor)
-
-        currPost.category_id = session.query(Category).first().pk
-        currPost.author_id = session.query(Author).first().pk
-
-        print(currPost)
-
-        session.add(currPost)
-        session.commit()
 
 
 if __name__ == '__main__':
